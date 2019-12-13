@@ -1,0 +1,452 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Hello World</title>
+</head>
+  <script src="pixi/pixi.min.js"></script>
+<body>
+  <script type="text/javascript">
+    let type = "WebGL"
+    if(!PIXI.utils.isWebGLSupported()){
+      type = "canvas"
+    }
+
+    PIXI.utils.sayHello(type)
+
+    //Create a Pixi Application
+    let app = new PIXI.Application({ 
+        width: 512,         // default: 800
+        height: 512,        // default: 600
+        antialias: true,    // default: false
+        transparent: false, // default: false
+        resolution: 1       // default: 1
+      }
+    );
+
+    // = GAME ENTITIES =========================================
+    // GRID ////////////////////////////////////////////////////
+    class Grid
+    {
+      constructor( _settings, _root, _model )
+      {
+        this._model = _model;
+
+        this._dots = [];
+
+        const rowCount = _settings.gridH;
+        const colCount = _settings.gridW;
+
+        for( let r = 0; r < rowCount; r++ )
+        {
+          let colums = [];
+
+           for( let c = 0; c < colCount; c++ )
+           {
+            let dot = new Dot( _settings, _root, r, c, _model );
+
+            dot.setClickHandler( () => { this.onClickHandler( r, c ) } );
+
+            colums.push( dot );
+           }
+
+           this._dots.push( colums );
+        }
+
+        this._onDotClickHandler = null;
+      }
+      ////////////////////////////////////////
+      onClickHandler( _row, _col )
+      {
+        console.log( "click handle (" + _row + ", " + _col + ")" );
+
+        if( this._onDotClickHandler !== null )
+        {
+          this._onDotClickHandler( _row, _col );
+        }
+      }
+      ////////////////////////////////////////
+      setDotClickHandler( _handler )
+      {
+        this._onDotClickHandler = _handler;
+      }
+      ////////////////////////////////////////
+      get dots()
+      {
+        return this._dots;
+      }
+    }
+    // DOT ////////////////////////////////////////////////////
+    class Dot
+    {
+      ////////////////////////////////////////
+      constructor( _settings, _root, _r, _c, _model )
+      {
+        this._r = _r;
+        this._c = _c;
+
+        this._model = model;
+
+        this._onClickHandler = null;
+
+        //console.log( "constructor Dot: " + this._r + " " + this._c );
+
+        this._empty = this.createCircle(_settings, _root, 0x808080, true);
+        this._player1 = this.createCircle(_settings, _root, 0x35CC5A, false);
+        this._player2 = this.createCircle(_settings, _root, 0x3500FA, false);  
+        this._block = this.createCircle(_settings, _root, 0xDE3249, false);
+
+        this._state = "empty";      
+      }
+      ////////////////////////////////////////
+      setClickHandler( _handler )
+      {
+        this._onClickHandler = _handler;
+      }
+      ////////////////////////////////////////
+      set state( _state )
+      {
+        this._empty.visible = false
+        this._player1.visible = false;
+        this._player2.visible = false;
+        this._block.visible = false;
+
+        if ( _state == "player1" )
+        {
+          this._player1.visible = true;
+        }
+        else if ( _state == "player2" )
+        {
+          this._player2.visible = true;
+        }
+        else if ( _state == "_block" )
+        {
+          this._block.visible = true;
+        }
+        else
+        {
+          this._empty.visible = true;
+        }
+
+        this._state = _state;
+      }
+      ////////////////////////////////////////
+      get state()
+      {
+        return this._state;
+      }
+      ////////////////////////////////////////
+      onClick() 
+      {
+        if ( this._onClickHandler !== null )
+        {
+          this._onClickHandler();
+        }
+      }
+      ////////////////////////////////////////
+      createCircle(_settings, _root, _color, _visible)
+      {
+        const graphics = new PIXI.Graphics();
+
+        const nodeOffset = _settings.nodeOffset;
+        const halfNodeOffset = nodeOffset / 2;
+
+        // Circle
+        graphics.lineStyle( 0 );
+        graphics.beginFill( _color, 1 );
+        graphics.drawCircle(
+          halfNodeOffset + this._c * nodeOffset
+          , halfNodeOffset + this._r * nodeOffset
+          , 8 );
+        graphics.endFill();
+
+        // Opt-in to interactivity
+        graphics.interactive = true;
+
+        // Shows hand cursor
+        graphics.buttonMode = true;
+
+        // Pointers normalize touch and mouse
+        graphics.on( 'pointerdown', () => { this.onClick() } );
+
+        graphics.visible = _visible;
+
+        // add to scene root
+        _root.addChild( graphics );
+
+        return graphics;
+      }
+    }
+    // MODEL ////////////////////////////////////////////////////
+    class Model 
+    {
+      constructor( _settings )
+      {
+        this._player = "player1";
+
+        this._grid = [];
+
+        const rowCount = _settings.gridH;
+        const colCount = _settings.gridW;
+
+        for( let r = 0; r < rowCount; r++ )
+        {
+          let colums = [];
+          for( let c = 0; c < colCount; c++ )
+          {
+            colums.push( "empty" );
+          }
+
+          this._grid.push( colums );
+        }
+      }
+      ////////////////////////////////////////
+      get grid()
+      {
+        return this._grid;
+      }
+      ////////////////////////////////////////
+      checkTurn( _row, _col )
+      {
+        let cell = this._grid[_row][_col];
+
+        if ( cell !== "empty")
+        {
+          return false;
+        }
+
+        return true;
+      }
+      ////////////////////////////////////////
+      makeTurn( _row, _col )
+      {
+        this._grid[_row][_col] = this._player;
+
+        let innerDots = this.getInnerDotsStartAt( _row, _col );
+
+        // todo: not implemented
+      }
+      ////////////////////////////////////////
+      getInnerDotsStartAt( _row, _col )
+      {
+        let dots = [[_row, _col]];
+
+        let hasLoop = false;
+
+        let prevRow = null;
+        let prevCol = null;
+
+        let row = _row;
+        let col = _col;
+
+        let it = 0;
+
+        // let neighbours = this.getNeighbours( row, col );
+
+        // let candidates = neighbours.filter( n => this._grid[n[0]][n[1]] === this._player );
+
+        // let values = neighbours.map( n => this._grid[n[0]][n[1]] );
+
+        // console.log( "neighbours: " + neighbours.map( n => "(" + n[0] + ", " + n[1] + ")" ) );
+        // console.log( "candidates: " + candidates.map( n => "(" + n[0] + ", " + n[1] + ")" ) );
+        // console.log( "candidates: " + values );
+
+        console.log("=========================");
+        while( true )
+        {
+          let neighbours = this.getNeighbours( row, col );
+
+          let candidates = neighbours.filter( n => 
+            this._grid[n[0]][n[1]] === this._player
+            && ( prevRow != n[0] || prevCol != n[1] )
+            );
+
+          console.log("------------------");
+          console.log( "[" + row + ", " + col + "] neighbours: " + neighbours.map( n => "(" + n[0] + ", " + n[1] + ")" ) );
+          console.log( "[" + row + ", " + col + "] candidates: " + candidates.map( n => "(" + n[0] + ", " + n[1] + ")" ) );
+
+          if ( !candidates.length )
+          {
+            break;
+          }
+
+          let next = null;
+
+          for( let ic = 0; ic < candidates.length; ic++ )
+          {
+            let candidate = candidates[ic];
+
+            let includes = false;
+            for( let id = 0; id < dots.length; id++ )
+            {
+              let dot = dots[id];
+
+              if( candidate[0] == dot[0] && candidate[1] == dot[1] )
+              {
+                includes = true;
+              }
+            }  
+
+            if ( includes == false )
+            {
+              next = candidate;
+              break;
+            }
+          }
+
+          if ( next == null )
+          {
+            if ( dots.length > 4 )
+            {
+              hasLoop = true;
+            }
+
+            break;
+          }
+
+          prevRow = row;
+          prevCol = col; 
+
+          row = next[0];
+          col = next[1];
+
+          dots.push( next );
+
+          it += 1;
+
+          if( it > 100 )
+          {
+            console.log( "too long... it: " + it );
+
+            break;
+          }
+        }
+
+        if ( hasLoop == true )
+        {
+          console.log( "LOOP LOOP LOOP LOOP" );
+        }
+
+        console.log( "dots: " + dots.map( n => "(" + n[0] + ", " + n[1] + ")" ) );
+
+        return [];
+      }
+      ////////////////////////////////////////
+      getNeighbours( _row, _col )
+      {
+        let neighbours = [];
+
+        neighbours.push( [_row - 1, _col - 1] );
+        neighbours.push( [_row - 1, _col] );
+        neighbours.push( [_row - 1, _col + 1] );
+
+        neighbours.push( [_row, _col + 1] );
+        neighbours.push( [_row, _col - 1] );
+
+        neighbours.push( [_row + 1, _col + 1] );
+        neighbours.push( [_row + 1, _col] );
+        neighbours.push( [_row + 1, _col - 1] );
+
+        return neighbours.filter( n => 
+          n[0] >= 0 
+          && n[1] >= 0
+          && n[0] < this._grid.length
+          && n[1] < this._grid[n[0]].length
+        );
+      }
+      ////////////////////////////////////////
+      changePlayer()
+      {
+        if (this._player === "player1")
+        {
+          this._player = "player2";
+        }
+        else
+        {
+          this._player = "player1";
+        }
+      }
+      ////////////////////////////////////////
+      get player()
+      {
+        return this._player;
+      }
+    }
+    // VIEW ////////////////////////////////////////////////////
+    class View
+    {
+      constructor( _settings, _root, _model )
+      {
+        this._model = _model;
+
+        this._grid = new Grid( _settings, _root, _model );
+      }
+      ////////////////////////////////////////
+      get grid()
+      {
+        return this._grid;
+      }
+    }
+    // CONTROLLER ///////////////////////////////////////////////
+    class Controller
+    {
+      ////////////////////////////////////////
+      constructor( _settings, _view, _model )
+      {
+        this._view = _view;
+        this._model = _model;
+        this._rowCount = _settings.gridH;
+        this._colCount = _settings.gridW;
+
+        this._view.grid.setDotClickHandler( ( _row, _col ) => { 
+          this.onDotClick( _row, _col );
+        });
+      }
+      ////////////////////////////////////////
+      onDotClick( _row, _col )
+      {
+        // check
+        if (this._model.checkTurn( _row, _col ) === false )
+        {
+          return;
+        }
+        // turn
+        this._model.makeTurn( _row, _col );
+        // update view 
+        // todo: maybe refactor to model observer)
+        const modelGrid = this._model.grid;
+        let dots = this._view.grid.dots;
+        
+        for ( let r = 0; r < this._rowCount; r++ )
+        {
+          for ( let c = 0; c < this._colCount; c++ )
+          {
+            let dot = dots[r][c];
+            let state = modelGrid[r][c];
+
+            dot.state = state;
+          }
+        }
+        // change player
+        this._model.changePlayer();
+      }
+    }
+    // = INIT ==============================================
+    const settings = {
+      nodeOffset : 30,
+      gridW : 15,
+      gridH : 15
+    }
+
+    const model = new Model( settings );
+
+    const view = new View( settings, app.stage, model );
+
+    const controller = new Controller( settings, view, model );
+    // =====================================================
+
+    //Add the canvas that Pixi automatically created for you to the HTML document
+    document.body.appendChild(app.view);
+  </script>
+</body>
+</html>
