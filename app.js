@@ -1,4 +1,6 @@
 var express = require('express');
-var app = express();
-app.use('/', express.static(__dirname + '/public/')); // ← adjust
-app.listen(3000, function() { console.log('listening'); });
+const PORT = process.env.PORT || 5000
+
+var app = express()
+    .use('/', express.static(__dirname + '/public/')) // ← adjust
+    .listen(PORT, () => console.log(`Listening on ${ PORT }`))
