@@ -177,6 +177,100 @@
         return graphics;
       }
     }
+    // UTILS ////////////////////////////////////////////////////
+    class Vertex
+    {
+        //////////////////////////////////////////
+        constructor( _row, _col )
+        {
+            this._row = _row;
+            this._col = _col;
+        }
+        //////////////////////////////////////////
+        get row()
+        {
+            return this._row;
+        }
+        //////////////////////////////////////////
+        get col()
+        {
+            return this._col;
+        }
+        //////////////////////////////////////////
+        equal( _vertex )
+        {
+            if( _vertex === undefined )
+            {
+                return false;
+            }
+
+            if ( this._row == _vertex._row && this._col == _vertex._col )
+            {
+                return true;
+            }
+
+            return false;
+        }
+        //////////////////////////////////////////
+        toString()
+        {
+            return "(" + this._row + ", " + this._col + ")";
+        }
+    }
+    //////////////////////////////////////////
+    class VertexArray
+    {
+        //////////////////////////////////////////
+        constructor( _array )
+        {
+            if ( _array !== undefined )
+            {
+                this._array = _array;
+            }
+
+            this._array = [];
+        }
+        //////////////////////////////////////////
+        push( _vertex )
+        {
+            this._array.push( _vertex );
+        }
+        //////////////////////////////////////////
+        includes( _vertex )
+        {
+            for( let i = 0; i < this._array.length; i++ )
+            {
+                let vertex = this._array[i];
+
+                if( vertex.equal( _vertex ) == true )
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        //////////////////////////////////////////
+        filter( _filterLambda )
+        {
+            return new VertexArray( this._array.filter( _filterLambda ) );
+        }
+        //////////////////////////////////////////
+        map( _mapLambda )
+        {
+            return new VertexArray( this._array.map( _mapLambda ) );
+        }
+        //////////////////////////////////////////
+        get length()
+        {
+            return this._array.length;
+        }
+        //////////////////////////////////////////
+        toString()
+        {
+            return "" + this._array.map( v => v.toString() );
+        }
+    }
     // MODEL ////////////////////////////////////////////////////
     class Model 
     {
@@ -222,136 +316,74 @@
       {
         this._grid[_row][_col] = this._player;
 
-        let innerDots = this.getInnerDotsStartAt( _row, _col );
+        let loop = this.getLoopVertexArrayStartFrom( _row, _col );
+
+        if ( loop.length > 4 )
+        {
+            console.log( "HAS LOOP:\n" + loop.toString() );
+        }
+        else
+        {
+            console.log( "NO LOOP" );
+        }
 
         // todo: not implemented
       }
       ////////////////////////////////////////
-      getInnerDotsStartAt( _row, _col )
+      getLoopVertexArrayStartFrom( _row, _col )
       {
-        let dots = [[_row, _col]];
+        let start = new Vertex( _row, _col );
+        let arr = [];
 
-        let hasLoop = false;
+        arr.push( start );
 
-        let prevRow = null;
-        let prevCol = null;
+        arr.push( new Vertex( 1, 1 ) );
 
-        let row = _row;
-        let col = _col;
+        console.log( arr.includes( start ) );
 
-        let it = 0;
+        // let explored = new VertexArray();
 
-        // let neighbours = this.getNeighbours( row, col );
+        // explored.push( start );
 
-        // let candidates = neighbours.filter( n => this._grid[n[0]][n[1]] === this._player );
+        // let valuesMap = { "empty" : "0", "player1" : "g", "player2" : "b" };
 
-        // let values = neighbours.map( n => this._grid[n[0]][n[1]] );
+        // let neighbours = this.getNeighboursVertexArray( start );
+        // let candidates = neighbours.filter( v => this._grid[v.row][v.col] === this._player );
+        // let values = neighbours.map( v => valuesMap[this._grid[v.row][v.col]] );
 
-        // console.log( "neighbours: " + neighbours.map( n => "(" + n[0] + ", " + n[1] + ")" ) );
-        // console.log( "candidates: " + candidates.map( n => "(" + n[0] + ", " + n[1] + ")" ) );
-        // console.log( "candidates: " + values );
+        // console.log( 
+        //     "neighbours: " + neighbours.toString()
+        //     + "\ncandidates: " + candidates.toString()
+        //     + "\ncandidates: " + values 
+        // );
 
-        console.log("=========================");
-        while( true )
-        {
-          let neighbours = this.getNeighbours( row, col );
-
-          let candidates = neighbours.filter( n => 
-            this._grid[n[0]][n[1]] === this._player
-            && ( prevRow != n[0] || prevCol != n[1] )
-            );
-
-          console.log("------------------");
-          console.log( "[" + row + ", " + col + "] neighbours: " + neighbours.map( n => "(" + n[0] + ", " + n[1] + ")" ) );
-          console.log( "[" + row + ", " + col + "] candidates: " + candidates.map( n => "(" + n[0] + ", " + n[1] + ")" ) );
-
-          if ( !candidates.length )
-          {
-            break;
-          }
-
-          let next = null;
-
-          for( let ic = 0; ic < candidates.length; ic++ )
-          {
-            let candidate = candidates[ic];
-
-            let includes = false;
-            for( let id = 0; id < dots.length; id++ )
-            {
-              let dot = dots[id];
-
-              if( candidate[0] == dot[0] && candidate[1] == dot[1] )
-              {
-                includes = true;
-              }
-            }  
-
-            if ( includes == false )
-            {
-              next = candidate;
-              break;
-            }
-          }
-
-          if ( next == null )
-          {
-            if ( dots.length > 4 )
-            {
-              hasLoop = true;
-            }
-
-            break;
-          }
-
-          prevRow = row;
-          prevCol = col; 
-
-          row = next[0];
-          col = next[1];
-
-          dots.push( next );
-
-          it += 1;
-
-          if( it > 100 )
-          {
-            console.log( "too long... it: " + it );
-
-            break;
-          }
-        }
-
-        if ( hasLoop == true )
-        {
-          console.log( "LOOP LOOP LOOP LOOP" );
-        }
-
-        console.log( "dots: " + dots.map( n => "(" + n[0] + ", " + n[1] + ")" ) );
-
-        return [];
+        return new VertexArray();
       }
       ////////////////////////////////////////
-      getNeighbours( _row, _col )
+      getNeighboursVertexArray( _vertex )
       {
+        let row = _vertex.row;
+        let col = _vertex.col;
+
         let neighbours = [];
 
-        neighbours.push( [_row - 1, _col - 1] );
-        neighbours.push( [_row - 1, _col] );
-        neighbours.push( [_row - 1, _col + 1] );
+        neighbours.push( new Vertex( row - 1, col - 1 ) );
+        neighbours.push( new Vertex( row - 1, col ) );
+        neighbours.push( new Vertex( row - 1, col + 1) );
 
-        neighbours.push( [_row, _col + 1] );
-        neighbours.push( [_row, _col - 1] );
+        neighbours.push( new Vertex( row, col + 1 ) );
 
-        neighbours.push( [_row + 1, _col + 1] );
-        neighbours.push( [_row + 1, _col] );
-        neighbours.push( [_row + 1, _col - 1] );
+        neighbours.push( new Vertex( row + 1, col + 1 ) );
+        neighbours.push( new Vertex( row + 1, col ) );
+        neighbours.push( new Vertex( row + 1, col - 1 ) );
 
-        return neighbours.filter( n => 
-          n[0] >= 0 
-          && n[1] >= 0
-          && n[0] < this._grid.length
-          && n[1] < this._grid[n[0]].length
+        neighbours.push( new Vertex( row, col - 1 ) );
+
+        return neighbours.filter( v => 
+          v.row >= 0 
+          && v.col >= 0
+          && v.row < this._grid.length
+          && v.col < this._grid[v.row].length
         );
       }
       ////////////////////////////////////////

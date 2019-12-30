@@ -1,0 +1,11 @@
+{
+  "name": "dots_game_pixi_js",
+  "version": "0.0.1",
+  "description": "Dots game, PixiJS + NodeJS",
+  "engines": {
+    "node": "12.x"
+  },
+  "dependencies": {
+    "express": "^4.15.2"
+  }
+}
